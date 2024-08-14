@@ -24,6 +24,6 @@ def create_transformer_encoder(input_shape, num_layers=4, d_model=64, num_heads=
         ])
         x = keras.layers.LayerNormalization(epsilon=1e-6)(x+ffn(x))
 
-    x = keras.layers.GlobalAveragePooling1D()(x) # type: ignore
+    x = keras.layers.GlobalAveragePooling1D()(x) # it is used because we get the output of encoder to a classifier # type: ignore
     return keras.Model(inputs=inputs, outputs=x)
 
