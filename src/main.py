@@ -195,8 +195,9 @@ y = np.array(y, dtype=np.int32)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42) 
 smote = SMOTE(random_state=42)
 X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train) # type: ignore
-
+X_test_smote, y_test_smote = smote.fit_resample(X_test, y_test) # type: ignore
 # Create and compile the transformer encoder
+print(Counter(y_test_smote))
 
 input_shape = X.shape[1]
 encoder = create_transformer_encoder(input_shape)
@@ -212,14 +213,14 @@ X_encoded = encoder.predict(X)
 svm_pipeline = make_pipeline(StandardScaler(), SVC(kernel='rbf', probability=True))
 
 # Train the SVM classifier
-svm_pipeline.fit(X_train, y_train)
+svm_pipeline.fit(X_train_smote, y_train_smote)
 
 # Make predictions
-y_pred = svm_pipeline.predict(X_test)
+y_pred = svm_pipeline.predict(X_test_smote)
 
 # Evaluate the model
-accuracy = accuracy_score(y_test, y_pred)
+accuracy = accuracy_score(y_test_smote, y_pred)
 print(f"Accuracy: {accuracy:.2f}")
 print("\nClassification Report:")
-print(classification_report(y_test, y_pred))
+print(classification_report(y_test, y_pred)) 
 
