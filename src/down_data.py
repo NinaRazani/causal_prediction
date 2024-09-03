@@ -62,6 +62,10 @@ def yfin_down(series_id, start, end, interval, log=False, *useless_cols):
     data = pd.DataFrame().assign(date=data['date'], Close=data['Close']) 
     # data = pd.DataFrame().assign(date=data['date'], Close=data['Close'], Open= data['Open'], High=data['High'], Low= data['Low']) 
     return data
+    
+# download from dukascopy
+def duk_down():
+    pass
 
 
 def extend_concat(df1, df2, scale=''): 
