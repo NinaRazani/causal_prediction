@@ -70,14 +70,14 @@ te_ir = transfer_ent(merg_ir_yf_df, 365)
 merg_inf_yf_df = extend_concat(inflation_rate_df, yah_df)
 te_inf = transfer_ent(merg_inf_yf_df, 365) 
 
-# #add datetime
+#add datetime
 yah_df.reset_index(inplace=True)
 yah_df['dayofweek'] = yah_df['date'].dt.day_of_week
 yah_df['date'] = pd.to_datetime(yah_df['date'], format='%Y.%m')
 yah_df['yearmonth'] = yah_df['date'].dt.month
 yah_df['month'] = yah_df['date'].dt.month
 
-# # rename columns and reset index
+# rename columns and reset index
 merg_ms_yf_df.rename(columns={"rate": "rate_ms"}, inplace=True)
 merg_re_yf_df.rename(columns={"rate":"rate_re"}, inplace=True)
 merg_ir_yf_df.rename(columns={"rate":"rate_ir"}, inplace=True) 
@@ -136,13 +136,17 @@ for i, df in enumerate(dfs_to_add2, 1):
     df = df.iloc[row_to_remove:, :]  
     column_name = df.columns[2]  # Get the name of the first column
     last_df[column_name] = df[column_name].values 
-
+m = []
+s = []
 for i in range(len(yah_df)): 
     close_column = yah_df.iloc[:i, 1].values
-    Std = np.std(close_column)  # type: ignore 
-    Mean = np.mean(close_column) # type: ignore   
-    yah_df['Mean'] = Mean
-    yah_df['std'] = Std         
+    S = np.std(close_column)  # type: ignore 
+    s.append(S)
+    M = np.mean(close_column) # type: ignore   
+    m.append(M) 
+
+yah_df['Std'] = s
+yah_df['Mean'] = m
 
 yah_df = yah_df.iloc[row_to_remove:, :] 
 yah_df.reset_index(inplace=True)
@@ -150,10 +154,10 @@ yah_df.reset_index(inplace=True)
 last_df['dayweek'] = yah_df['dayofweek']
 last_df['monthyear'] = yah_df['yearmonth']
 last_df['Mean'] = yah_df['Mean']
-last_df['Std'] = yah_df['std'] 
+last_df['Std'] = yah_df['Std']
 last_df['target'] = yah_df['Close'] 
 
-print(last_df.head(2))
+print(last_df.head(73))
 
 # # #analysis the data
 # def array_stats(arr): 
@@ -188,52 +192,56 @@ print(last_df.head(2))
 
 # # # transformer encoder 
 
-# # Number of previous days to use for prediction
+# # # Number of previous days to use for prediction
 window_size = 72 #last three month 
 # Create the feature matrix with the previous 3 month
 X = []
 y = []
 
-for i in range(window_size, len(last_df)):
+for i in range(window_size, window_size+1): 
+    print(i)
     X.append(last_df.iloc[i-window_size:i, :-3].values.flatten()) 
     # # y.append(1 if last_df.iloc[i, -1] > last_df.iloc[i-1, -1] else 0)  # type: ignore # 1 if price went up, 0 if down  
     # # y.append(0 if last_df.iloc[i, -1] < Mean-Std else 1 if last_df.iloc[i, -1] > Mean+Std else 2)      # 0 if short, 1 if long, 2 neutral
-    y.append(1 if last_df.iloc[i-window_size, -1] > last_df.iloc[i-window_size, -3] - last_df.iloc[i-window_size, -2] else 0)  # type: ignore 
+    y.append(1 if (last_df.iloc[i, -1] < last_df.iloc[i, -3] - last_df.iloc[i, -2] or last_df.iloc[i, -1] >
+                    last_df.iloc[i, -3] + last_df.iloc[i, -2]) else 0)  # type: ignore 1 if close>mean(t-1)-std(t-1)
+    print(last_df.iloc[i, -1], last_df.iloc[i, -2], last_df.iloc[i, -3])
 
 X = np.array(X, dtype=np.float32) 
 y = np.array(y, dtype=np.int32) 
+print(X[0], y[0]) 
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42) 
-# # smote = SMOTE(random_state=42)
-# # X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train) # type: ignore
-# # X_test_smote, y_test_smote = smote.fit_resample(X_test, y_test) # type: ignore
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42) 
+# # # smote = SMOTE(random_state=42)
+# # # X_train_smote, y_train_smote = smote.fit_resample(X_train, y_train) # type: ignore   
+# # # X_test_smote, y_test_smote = smote.fit_resample(X_test, y_test) # type: ignore
 
-# # Create and compile the transformer encoder
+# # # Create and compile the transformer encoder
 
-input_shape = X.shape[1]  
-encoder = create_transformer_encoder(input_shape)
-encoder.compile(optimizer='adam', loss='mse')  
+# input_shape = X.shape[1]  
+# encoder = create_transformer_encoder(input_shape)
+# encoder.compile(optimizer='adam', loss='mse')  
 
-# Use the encoder to get the new feature representations
-X_encoded = encoder.predict(X) 
+# # Use the encoder to get the new feature representations
+# X_encoded = encoder.predict(X) 
 
-# Create a pipeline with StandardScaler and SVM
-svm_pipeline = make_pipeline(StandardScaler(), SVC(kernel='rbf', probability=True))
+# # Create a pipeline with StandardScaler and SVM
+# svm_pipeline = make_pipeline(StandardScaler(), SVC(kernel='rbf', probability=True))
 
-# Train the SVM classifier
-# svm_pipeline.fit(X_train_smote, y_train_smote)
-svm_pipeline.fit(X_train, y_train)
+# # Train the SVM classifier
+# # svm_pipeline.fit(X_train_smote, y_train_smote)
+# svm_pipeline.fit(X_train, y_train)
 
-# Make predictions
-# y_pred = svm_pipeline.predict(X_test_smote)
-y_pred = svm_pipeline.predict(X_test)
+# # Make predictions
+# # y_pred = svm_pipeline.predict(X_test_smote)
+# y_pred = svm_pipeline.predict(X_test)
 
-# Evaluate the model
-# accuracy = accuracy_score(y_test_smote, y_pred)
-accuracy = accuracy_score(y_test, y_pred)
-print(f"Accuracy: {accuracy:.2f}")
-print("\nClassification Report:")
-print(classification_report(y_test, y_pred))    
+# # Evaluate the model
+# # accuracy = accuracy_score(y_test_smote, y_pred)
+# accuracy = accuracy_score(y_test, y_pred)
+# print(f"Accuracy: {accuracy:.2f}")
+# print("\nClassification Report:")
+# print(classification_report(y_test, y_pred))    
 
 
 # random forest classification
